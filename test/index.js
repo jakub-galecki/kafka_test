@@ -1,38 +1,27 @@
-const { Kafka } = require('@confluentinc/kafka-javascript').KafkaJS;
+const {Kafka} = require("kafkajs");
 
-async function consumerStart() {
-  let consumer;
-  let stopped = false;
+const kafka = new Kafka({
+    clientId: "my-app",
+    brokers: ["localhost:39092", "localhost:39093", "localhost:39094"],
+});
 
-  // Initialization
-  consumer = new Kafka().consumer({
-    'bootstrap.servers': 'localhost:39092,localhost:39093,localhost:39094',
-    'group.id': 'test',
-    'auto.offset.reset': 'earliest',
-  });
+async function consumerRun() {
+    const consumer = kafka.consumer({groupId: 'ggg'})
 
-  await consumer.connect();
-  await consumer.subscribe({ topics: ["products"] });
+    await consumer.connect()
+    await consumer.subscribe({topic: 'products', fromBeginning: true})
 
-  consumer.run({
-    eachMessage: async ({ topic, partition, message }) => {
-      console.log({
-        topic,
-        partition,
-        offset: message.offset,
-        key: message.key?.toString(),
-        value: message.value.toString(),
-      });
-    }
-  });
-
-  // Update stopped whenever we're done consuming.
-  // The update can be in another async function or scheduled with setTimeout etc.
-  while(!stopped) {
-    await new Promise(resolve => setTimeout(resolve, 1000));
-  }
-
-  await consumer.disconnect();
+    await consumer.run({
+        eachMessage: async ({topic, partition, message}) => {
+            console.log({
+                topic,
+                partition,
+                message,
+                value: message.value.toString(),
+            })
+        },
+    })
 }
 
-consumerStart();
+consumerRun();
+
